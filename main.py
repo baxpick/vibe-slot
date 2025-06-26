@@ -71,7 +71,8 @@ def evaluate_line(line: list[str]) -> int:
 def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]]:
     # returns list of (line_coords, payout)
     wins = []
-    for coords in LINES:
+    for coords in get_selected_lines():
+        # only evaluate bet-selected lines
         line_syms = [grid[r][c] for r,c in coords]
         payout = evaluate_line(line_syms)
         if payout > 0:
@@ -185,6 +186,7 @@ def main():
                 grid = spin()
                 wins = evaluate_all(grid)
                 total = sum(p for _,p in wins)
+                skip_post_win = False
                 # continuously highlight winning lines until player spins again
                 if wins:
                     idx = 0
@@ -200,19 +202,28 @@ def main():
                             if ev.type == pygame.QUIT:
                                 pygame.quit()
                                 sys.exit()
+                            # allow stopping highlight with space key
                             if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                                skip_post_win = True
                                 highlighting = False
                                 break
-                # update credits and final message
-                if total > 0:
-                    credits += total
-                    message = f'Total win {total}'
-                else:
-                    message = 'No win'
-                if credits <= 0:
-                    message = 'Game over!'
-                # redraw final grid with overlays
-                draw(screen, grid, credits, message, font, None, get_selected_lines())
+                            # allow changing bet_mode during highlight
+                            if ev.type == pygame.MOUSEBUTTONDOWN and button_rect.collidepoint(ev.pos):
+                                bet_mode = (bet_mode + 1) % len(MODES)
+                                draw(screen, grid, credits, '', font, None, get_selected_lines())
+                                highlighting = False
+                                break
+                # update credits and final message unless skipped
+                if not skip_post_win:
+                    if total > 0:
+                        credits += total
+                        message = f'Total win {total}'
+                    else:
+                        message = 'No win'
+                    if credits <= 0:
+                        message = 'Game over!'
+                    # redraw final grid with overlays
+                    draw(screen, grid, credits, message, font, None, get_selected_lines())
                 # spin complete: re-enable mode toggling
                 spin_active = False
         clock.tick(30)
