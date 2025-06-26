@@ -86,20 +86,23 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
     # compute offsets to center slot
     offset_x = (SCREEN_WIDTH - 264) // 2
     offset_y = (SCREEN_HEIGHT - 204) // 2
-    # prepare fancy lines selection button once
-    label = font.render(f'Lines: {MODES[bet_mode]}', True, (255,255,255))
+    # prepare fancy lines selection button with fixed width based on widest label
     padding_x, padding_y = 20, 10
-    text_w, text_h = label.get_size()
-    btn_w = max(BUTTON_WIDTH, text_w + padding_x * 2)
+    # compute max width among all mode labels
+    max_label_w = max(font.size(f'Lines: {mode}')[0] for mode in MODES)
+    btn_w = max_label_w + padding_x * 2
     btn_h = BUTTON_HEIGHT
     btn_x = SCREEN_WIDTH // 2 - btn_w // 2
     btn_y = 10
     btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+    # render current label
+    label = font.render(f'Lines: {MODES[bet_mode]}', True, (255,255,255))
+    lbl_rect = label.get_rect(center=btn_rect.center)
+
     # draw fancy button: shadow, background, border, label
     pygame.draw.rect(screen, (0, 0, 0), btn_rect.move(3, 3), border_radius=8)
     pygame.draw.rect(screen, (30, 144, 255), btn_rect, border_radius=8)
     pygame.draw.rect(screen, (255, 255, 255), btn_rect, 2, border_radius=8)
-    lbl_rect = label.get_rect(center=btn_rect.center)
     screen.blit(label, lbl_rect)
 
     # draw 3x3 grid
