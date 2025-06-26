@@ -25,7 +25,7 @@ for sym, cp in CODEPOINTS.items():
         try: urllib.request.urlretrieve(f'https://abs.twimg.com/emoji/v2/72x72/{cp}.png', fp)
         except: pass
 
-# Prepare lines: 3 horizontals and 2 diagonals
+# Prepare lines: 3 horizontals and 2 diagonals, with distinct colors
 LINES = [
     [(0,0),(0,1),(0,2)],  # top row
     [(1,0),(1,1),(1,2)],  # middle row
@@ -33,6 +33,26 @@ LINES = [
     [(0,0),(1,1),(2,2)],  # main diagonal
     [(0,2),(1,1),(2,0)],  # anti-diagonal
 ]
+# distinct color per line for overlay
+LINE_COLORS = [
+    (255, 0, 0),      # top row
+    (255, 165, 0),    # middle row
+    (255, 255, 0),    # bottom row
+    (0, 255, 0),      # main diagonal
+    (0, 255, 255),    # anti-diagonal
+]
+
+# Betting mode options
+MODES = ['Horizontal', 'Diagonal', 'Both']
+bet_mode = 0
+
+def get_selected_lines() -> list[list[tuple[int,int]]]:
+    # return list of line coordinate groups based on bet mode
+    if bet_mode == 0:
+        return LINES[:3]
+    if bet_mode == 1:
+        return LINES[3:]
+    return LINES
 
 def spin() -> list[list[str]]:
     # generate 3x3 grid of random symbols
@@ -58,41 +78,76 @@ def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]
             wins.append((coords, payout))
     return wins
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 360, 320
+SCREEN_WIDTH, SCREEN_HEIGHT = 600, 500
+BUTTON_WIDTH, BUTTON_HEIGHT = 180, 40
 
-def draw(screen, grid, credits, message, font, highlight: list[tuple[int,int]] = None):
+def draw(screen, grid, credits, message, font, highlight_win=None, selected_lines=None):
     screen.fill((30, 30, 30))
+    # compute offsets to center slot
+    offset_x = (SCREEN_WIDTH - 264) // 2
+    offset_y = (SCREEN_HEIGHT - 204) // 2
+    # prepare fancy lines selection button once
+    label = font.render(f'Lines: {MODES[bet_mode]}', True, (255,255,255))
+    padding_x, padding_y = 20, 10
+    text_w, text_h = label.get_size()
+    btn_w = max(BUTTON_WIDTH, text_w + padding_x * 2)
+    btn_h = BUTTON_HEIGHT
+    btn_x = SCREEN_WIDTH // 2 - btn_w // 2
+    btn_y = 10
+    btn_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+    # draw fancy button: shadow, background, border, label
+    pygame.draw.rect(screen, (0, 0, 0), btn_rect.move(3, 3), border_radius=8)
+    pygame.draw.rect(screen, (30, 144, 255), btn_rect, border_radius=8)
+    pygame.draw.rect(screen, (255, 255, 255), btn_rect, 2, border_radius=8)
+    lbl_rect = label.get_rect(center=btn_rect.center)
+    screen.blit(label, lbl_rect)
+
     # draw 3x3 grid
     for r, row in enumerate(grid):
         for c, sym in enumerate(row):
             img = pygame.image.load(os.path.join(ASSET_DIR, f"{CODEPOINTS[sym]}.png")).convert_alpha()
             img = pygame.transform.smoothscale(img, (64,64))
-            x = 48 + c * 100
-            y = 50 + r * 70
+            x = offset_x + c * 100
+            y = offset_y + r * 70
             screen.blit(img, (x, y))
             # highlight winning cells
-            if highlight and (r,c) in highlight:
+            if highlight_win and (r, c) in highlight_win:
                 pygame.draw.rect(screen, (255,215,0), (x-4, y-4, 64+8, 64+8), 4)
-    # draw credits and message
+    # draw selected bet lines as colored connectors
+    if selected_lines:
+        for idx, line in enumerate(selected_lines):
+            color = LINE_COLORS[idx]
+            points = []
+            for r, c in line:
+                px = offset_x + c * 100 + 32
+                py = offset_y + r * 70 + 32
+                points.append((px, py))
+            pygame.draw.lines(screen, color, False, points, 4)
+    # draw credits, bet, and message
     cred_text = font.render(f'Credits: {credits}', True, (255,255,255))
-    screen.blit(cred_text, (10, 10))
+    screen.blit(cred_text, (10, btn_y + btn_h + 10))
+    if selected_lines is not None:
+        bet = len(selected_lines)
+        bet_text = font.render(f'Bet: {bet}', True, (255,255,255))
+        screen.blit(bet_text, (10, btn_y + btn_h + 40))
     msg_text = font.render(message, True, (255,255,255))
     screen.blit(msg_text, (10, SCREEN_HEIGHT - 40))
     pygame.display.flip()
 
-
 def main():
     pygame.init()
-    # initialize display before loading images
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Fruit Slot')
+    spin_active = False
+    # prepare button rect for input detection
+    button_rect = pygame.Rect(200, 10, 150, 30)
     # preload images after video mode is set
     IMAGES = {sym: pygame.transform.smoothscale(pygame.image.load(os.path.join(ASSET_DIR, f"{cp}.png")).convert_alpha(), (64,64)) for sym, cp in CODEPOINTS.items()}
     font = pygame.font.Font(None, 32)
     credits = 10
     grid = spin()
     message = 'Press SPACE to spin'
-    draw(screen, grid, credits, message, font)
+    draw(screen, grid, credits, message, font, None, get_selected_lines())
     clock = pygame.time.Clock()
 
     while True:
@@ -100,34 +155,63 @@ def main():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 sys.exit()
+            # cycle betting mode on button click (disabled during spin)
+            if event.type == pygame.MOUSEBUTTONDOWN and not spin_active and button_rect.collidepoint(event.pos):
+                global bet_mode
+                bet_mode = (bet_mode + 1) % len(MODES)
+                draw(screen, grid, credits, message, font, None, get_selected_lines())
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                # start spin: disable mode toggling
+                spin_active = True
+                # determine bet cost as number of selected lines
+                cost = len(get_selected_lines())
+                if credits < cost:
+                    message = 'Not enough credits'
+                    draw(screen, grid, credits, message, font, None, get_selected_lines())
+                    continue
+                credits -= cost
+                if credits < 0:
+                    credits = 0
+                spin_active = True
+                # spin animation: cycle symbols, no overlays
+                for _ in range(15):
+                    temp_grid = [random.choices(SYMBOLS, k=3) for _ in range(3)]
+                    draw(screen, temp_grid, credits, '', font, None, None)
+                    pygame.time.delay(50)
+                # final spin result
+                grid = spin()
+                wins = evaluate_all(grid)
+                total = sum(p for _,p in wins)
+                # continuously highlight winning lines until player spins again
+                if wins:
+                    idx = 0
+                    highlighting = True
+                    while highlighting:
+                        coords, payout = wins[idx]
+                        message = f'Line {idx+1} wins {payout}'
+                        draw(screen, grid, credits, message, font, highlight_win=coords, selected_lines=None)
+                        pygame.time.delay(800)
+                        idx = (idx + 1) % len(wins)
+                        # handle quitting or new spin
+                        for ev in pygame.event.get():
+                            if ev.type == pygame.QUIT:
+                                pygame.quit()
+                                sys.exit()
+                            if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                                highlighting = False
+                                break
+                # update credits and final message
+                if total > 0:
+                    credits += total
+                    message = f'Total win {total}'
+                else:
+                    message = 'No win'
                 if credits <= 0:
                     message = 'Game over!'
-                else:
-                    credits -= 1
-                    # spin animation: cycle random symbols
-                    for _ in range(15):
-                        temp_grid = [random.choices(SYMBOLS, k=3) for _ in range(3)]
-                        draw(screen, temp_grid, credits, '', font)
-                        pygame.time.delay(50)
-                    # final spin result
-                    grid = spin()
-                    wins = evaluate_all(grid)
-                    total = sum(p for _,p in wins)
-                    # highlight each winning line
-                    for idx, (coords, payout) in enumerate(wins):
-                        message = f'Line {idx+1} wins {payout}'
-                        draw(screen, grid, credits, message, font, highlight=coords)
-                        pygame.time.delay(500)
-                    # update credits and final message
-                    if total > 0:
-                        credits += total
-                        message = f'Total win {total}'
-                    else:
-                        message = 'No win'
-                    if credits <= 0:
-                        message = 'Game over!'
-                    draw(screen, grid, credits, message, font)
+                # redraw final grid with overlays
+                draw(screen, grid, credits, message, font, None, get_selected_lines())
+                # spin complete: re-enable mode toggling
+                spin_active = False
         clock.tick(30)
 
 if __name__ == '__main__':
