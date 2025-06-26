@@ -25,27 +25,52 @@ for sym, cp in CODEPOINTS.items():
         try: urllib.request.urlretrieve(f'https://abs.twimg.com/emoji/v2/72x72/{cp}.png', fp)
         except: pass
 
-def spin() -> list[str]:
-    return random.choices(SYMBOLS, k=3)
+# Prepare lines: 3 horizontals and 2 diagonals
+LINES = [
+    [(0,0),(0,1),(0,2)],  # top row
+    [(1,0),(1,1),(1,2)],  # middle row
+    [(2,0),(2,1),(2,2)],  # bottom row
+    [(0,0),(1,1),(2,2)],  # main diagonal
+    [(0,2),(1,1),(2,0)],  # anti-diagonal
+]
 
-def evaluate(results: list[str]) -> int:
-    unique = set(results)
+def spin() -> list[list[str]]:
+    # generate 3x3 grid of random symbols
+    return [random.choices(SYMBOLS, k=3) for _ in range(3)]
+
+def evaluate_line(line: list[str]) -> int:
+    unique = set(line)
     if len(unique) == 1:
         return 5
     if len(unique) == 2:
         return 2
     return 0
 
+def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]]:
+    # returns list of (line_coords, payout)
+    wins = []
+    for coords in LINES:
+        line_syms = [grid[r][c] for r,c in coords]
+        payout = evaluate_line(line_syms)
+        if payout > 0:
+            wins.append((coords, payout))
+    return wins
+
 SCREEN_WIDTH, SCREEN_HEIGHT = 360, 240
 
-def draw(screen, results, credits, message, font):
+def draw(screen, grid, credits, message, font, highlight: list[tuple[int,int]] = None):
     screen.fill((30, 30, 30))
-    # draw fruit images
-    for i, sym in enumerate(results):
-        img = pygame.image.load(os.path.join(ASSET_DIR, f"{CODEPOINTS[sym]}.png")).convert_alpha()
-        img = pygame.transform.smoothscale(img, (64,64))
-        x = 48 + i * 100
-        screen.blit(img, (x, 50))
+    # draw 3x3 grid
+    for r, row in enumerate(grid):
+        for c, sym in enumerate(row):
+            img = pygame.image.load(os.path.join(ASSET_DIR, f"{CODEPOINTS[sym]}.png")).convert_alpha()
+            img = pygame.transform.smoothscale(img, (64,64))
+            x = 48 + c * 100
+            y = 50 + r * 70
+            screen.blit(img, (x, y))
+            # highlight winning cells
+            if highlight and (r,c) in highlight:
+                pygame.draw.rect(screen, (255,215,0), (x-4, y-4, 64+8, 64+8), 4)
     # draw credits and message
     cred_text = font.render(f'Credits: {credits}', True, (255,255,255))
     screen.blit(cred_text, (10, 10))
@@ -63,9 +88,9 @@ def main():
     IMAGES = {sym: pygame.transform.smoothscale(pygame.image.load(os.path.join(ASSET_DIR, f"{cp}.png")).convert_alpha(), (64,64)) for sym, cp in CODEPOINTS.items()}
     font = pygame.font.Font(None, 32)
     credits = 10
-    results = spin()
+    grid = spin()
     message = 'Press SPACE to spin'
-    draw(screen, results, credits, message, font)
+    draw(screen, grid, credits, message, font)
     clock = pygame.time.Clock()
 
     while True:
@@ -80,20 +105,27 @@ def main():
                     credits -= 1
                     # spin animation: cycle random symbols
                     for _ in range(15):
-                        temp = random.choices(SYMBOLS, k=3)
-                        draw(screen, temp, credits, '', font)
+                        temp_grid = [random.choices(SYMBOLS, k=3) for _ in range(3)]
+                        draw(screen, temp_grid, credits, '', font)
                         pygame.time.delay(50)
                     # final spin result
-                    results = spin()
-                    payout = evaluate(results)
-                    if payout:
-                        credits += payout
-                        message = f'You win {payout}!'
+                    grid = spin()
+                    wins = evaluate_all(grid)
+                    total = sum(p for _,p in wins)
+                    # highlight each winning line
+                    for idx, (coords, payout) in enumerate(wins):
+                        message = f'Line {idx+1} wins {payout}'
+                        draw(screen, grid, credits, message, font, highlight=coords)
+                        pygame.time.delay(500)
+                    # update credits and final message
+                    if total > 0:
+                        credits += total
+                        message = f'Total win {total}'
                     else:
                         message = 'No win'
                     if credits <= 0:
                         message = 'Game over!'
-                draw(screen, results, credits, message, font)
+                    draw(screen, grid, credits, message, font)
         clock.tick(30)
 
 if __name__ == '__main__':
