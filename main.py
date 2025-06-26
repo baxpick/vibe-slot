@@ -148,7 +148,7 @@ def main():
     # preload images after video mode is set
     IMAGES = {sym: pygame.transform.smoothscale(pygame.image.load(os.path.join(ASSET_DIR, f"{cp}.png")).convert_alpha(), (64,64)) for sym, cp in CODEPOINTS.items()}
     font = pygame.font.Font(None, 32)
-    credits = 10
+    credits = 100
     grid = spin()
     message = 'Press SPACE to spin'
     draw(screen, grid, credits, message, font, None, get_selected_lines())
@@ -204,6 +204,8 @@ def main():
                                 sys.exit()
                             # allow stopping highlight with space key
                             if ev.type == pygame.KEYDOWN and ev.key == pygame.K_SPACE:
+                                # re-post SPACE to trigger immediate new spin
+                                pygame.event.post(pygame.event.Event(pygame.KEYDOWN, key=pygame.K_SPACE))
                                 skip_post_win = True
                                 highlighting = False
                                 break
