@@ -39,11 +39,13 @@ def spin() -> list[list[str]]:
     return [random.choices(SYMBOLS, k=3) for _ in range(3)]
 
 def evaluate_line(line: list[str]) -> int:
-    unique = set(line)
-    if len(unique) == 1:
+    # three of a kind
+    if line[0] == line[1] == line[2]:
         return 5
-    if len(unique) == 2:
-        return 2
+    # two adjacent matching symbols
+    for i in range(2):
+        if line[i] == line[i+1]:
+            return 2
     return 0
 
 def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]]:
@@ -56,7 +58,7 @@ def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]
             wins.append((coords, payout))
     return wins
 
-SCREEN_WIDTH, SCREEN_HEIGHT = 360, 240
+SCREEN_WIDTH, SCREEN_HEIGHT = 360, 320
 
 def draw(screen, grid, credits, message, font, highlight: list[tuple[int,int]] = None):
     screen.fill((30, 30, 30))
