@@ -145,9 +145,17 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Fruit Slot')
     spin_active = False
-    show_selection = False
-    # prepare button rect for input detection
-    button_rect = pygame.Rect(200, 10, 150, 30)
+    show_selection = False  # initialize before any draw or event
+
+    # prepare dynamic button rect for input detection (must match draw)
+    # use same padding and width logic as draw
+    padding_x, padding_y = 20, 10
+    max_label_w = max(pygame.font.Font(None, 32).size(f'Lines: {mode}')[0] for mode in MODES)
+    btn_w = max_label_w + padding_x * 2
+    btn_h = BUTTON_HEIGHT
+    btn_x = SCREEN_WIDTH // 2 - btn_w // 2
+    btn_y = 10
+    button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
     # preload images after video mode is set
     IMAGES = {sym: pygame.transform.smoothscale(pygame.image.load(os.path.join(ASSET_DIR, f"{cp}.png")).convert_alpha(), (64,64)) for sym, cp in CODEPOINTS.items()}
     font = pygame.font.Font(None, 32)
