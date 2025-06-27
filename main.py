@@ -117,7 +117,7 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
             # highlight winning cells
             if highlight_win and (r, c) in highlight_win:
                 pygame.draw.rect(screen, (255,215,0), (x-4, y-4, 64+8, 64+8), 4)
-    # draw selected bet lines as colored connectors
+    # draw selected bet lines as colored connectors when passed
     if selected_lines:
         for idx, line in enumerate(selected_lines):
             color = LINE_COLORS[idx]
@@ -127,13 +127,15 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
                 py = offset_y + r * 70 + 32
                 points.append((px, py))
             pygame.draw.lines(screen, color, False, points, 4)
-    # draw credits, bet, and message
+    # draw credits, bet, lines count, and message
     cred_text = font.render(f'Credits: {credits}', True, (255,255,255))
     screen.blit(cred_text, (10, btn_y + btn_h + 10))
-    if selected_lines is not None:
-        bet = len(selected_lines)
-        bet_text = font.render(f'Bet: {bet}', True, (255,255,255))
-        screen.blit(bet_text, (10, btn_y + btn_h + 40))
+    # show bet and lines count
+    bet = len(get_selected_lines())
+    bet_text = font.render(f'Bet: {bet}', True, (255,255,255))
+    screen.blit(bet_text, (10, btn_y + btn_h + 40))
+    lines_text = font.render(f'Lines: {bet}', True, (255,255,255))
+    screen.blit(lines_text, (10, btn_y + btn_h + 70))
     msg_text = font.render(message, True, (255,255,255))
     screen.blit(msg_text, (10, SCREEN_HEIGHT - 40))
     pygame.display.flip()
@@ -143,6 +145,7 @@ def main():
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Fruit Slot')
     spin_active = False
+    show_selection = False
     # prepare button rect for input detection
     button_rect = pygame.Rect(200, 10, 150, 30)
     # preload images after video mode is set
@@ -151,7 +154,8 @@ def main():
     credits = 100
     grid = spin()
     message = 'Press SPACE to spin'
-    draw(screen, grid, credits, message, font, None, get_selected_lines())
+    # initial display: show overlays if selection active
+    draw(screen, grid, credits, message, font, None, get_selected_lines() if show_selection else None)
     clock = pygame.time.Clock()
 
     while True:
@@ -163,10 +167,12 @@ def main():
             if event.type == pygame.MOUSEBUTTONDOWN and not spin_active and button_rect.collidepoint(event.pos):
                 global bet_mode
                 bet_mode = (bet_mode + 1) % len(MODES)
+                show_selection = True
                 draw(screen, grid, credits, message, font, None, get_selected_lines())
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                # start spin: disable mode toggling
+                # start spin: disable mode toggling and hide overlays
                 spin_active = True
+                show_selection = False
                 # determine bet cost as number of selected lines
                 cost = len(get_selected_lines())
                 if credits < cost:
@@ -224,8 +230,8 @@ def main():
                         message = 'No win'
                     if credits <= 0:
                         message = 'Game over!'
-                    # redraw final grid with overlays
-                    draw(screen, grid, credits, message, font, None, get_selected_lines())
+                    # redraw final grid without overlays
+                    draw(screen, grid, credits, message, font, None, None)
                 # spin complete: re-enable mode toggling
                 spin_active = False
         clock.tick(30)
