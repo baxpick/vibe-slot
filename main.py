@@ -45,6 +45,9 @@ LINE_COLORS = [
 # Betting mode options
 MODES = ['Horizontal', 'Diagonal', 'Both']
 bet_mode = 0
+# Multiplier options
+MULTIPLIERS = [1, 2, 3, 4, 5]
+multiplier_idx = 0
 
 def get_selected_lines() -> list[list[tuple[int,int]]]:
     # return list of line coordinate groups based on bet mode
@@ -69,7 +72,6 @@ def evaluate_line(line: list[str]) -> int:
     return 0
 
 def evaluate_all(grid: list[list[str]]) -> list[tuple[list[tuple[int,int]], int]]:
-    # returns list of (line_coords, payout)
     wins = []
     for coords in get_selected_lines():
         # only evaluate bet-selected lines
@@ -106,6 +108,22 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
     pygame.draw.rect(screen, (255, 255, 255), btn_rect, 2, border_radius=8)
     screen.blit(label, lbl_rect)
 
+    # draw fancy multiplier button below lines button
+    # compute max width for multiplier labels
+    max_mult_w = max(font.size(f'Multiplier: x{m}')[0] for m in MULTIPLIERS)
+    mbtn_w = max_mult_w + padding_x * 2
+    mbtn_h = BUTTON_HEIGHT
+    mbtn_x = SCREEN_WIDTH // 2 - mbtn_w // 2
+    mbtn_y = btn_y + btn_h + 5
+    mbtn_rect = pygame.Rect(mbtn_x, mbtn_y, mbtn_w, mbtn_h)
+    # draw multiplier button
+    pygame.draw.rect(screen, (0,0,0), mbtn_rect.move(3,3), border_radius=8)
+    pygame.draw.rect(screen, (255,165,0), mbtn_rect, border_radius=8)  # orange background
+    pygame.draw.rect(screen, (255,255,255), mbtn_rect, 2, border_radius=8)
+    mult_label = font.render(f'Multiplier: x{MULTIPLIERS[multiplier_idx]}', True, (255,255,255))
+    mult_lbl_rect = mult_label.get_rect(center=mbtn_rect.center)
+    screen.blit(mult_label, mult_lbl_rect)
+
     # draw 3x3 grid
     for r, row in enumerate(grid):
         for c, sym in enumerate(row):
@@ -130,12 +148,9 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
     # draw credits, bet, lines count, and message
     cred_text = font.render(f'Credits: {credits}', True, (255,255,255))
     screen.blit(cred_text, (10, btn_y + btn_h + 10))
-    # show bet and lines count
-    bet = len(get_selected_lines())
-    bet_text = font.render(f'Bet: {bet}', True, (255,255,255))
+    bet_amount = len(get_selected_lines()) * MULTIPLIERS[multiplier_idx]
+    bet_text = font.render(f'Bet: {bet_amount}', True, (255,255,255))
     screen.blit(bet_text, (10, btn_y + btn_h + 40))
-    lines_text = font.render(f'Lines: {bet}', True, (255,255,255))
-    screen.blit(lines_text, (10, btn_y + btn_h + 70))
     msg_text = font.render(message, True, (255,255,255))
     screen.blit(msg_text, (10, SCREEN_HEIGHT - 40))
     pygame.display.flip()
@@ -148,7 +163,6 @@ def main():
     show_selection = False  # initialize before any draw or event
 
     # prepare dynamic button rect for input detection (must match draw)
-    # use same padding and width logic as draw
     padding_x, padding_y = 20, 10
     max_label_w = max(pygame.font.Font(None, 32).size(f'Lines: {mode}')[0] for mode in MODES)
     btn_w = max_label_w + padding_x * 2
@@ -156,6 +170,14 @@ def main():
     btn_x = SCREEN_WIDTH // 2 - btn_w // 2
     btn_y = 10
     button_rect = pygame.Rect(btn_x, btn_y, btn_w, btn_h)
+    # prepare multiplier button rect for input detection
+    max_mult_w = max(pygame.font.Font(None, 32).size(f'Multiplier: x{m}')[0] for m in MULTIPLIERS)
+    mbtn_w = max_mult_w + padding_x * 2
+    mbtn_h = BUTTON_HEIGHT
+    mbtn_x = SCREEN_WIDTH // 2 - mbtn_w // 2
+    mbtn_y = btn_y + btn_h + 5
+    mult_button_rect = pygame.Rect(mbtn_x, mbtn_y, mbtn_w, mbtn_h)
+
     # preload images after video mode is set
     IMAGES = {sym: pygame.transform.smoothscale(pygame.image.load(os.path.join(ASSET_DIR, f"{cp}.png")).convert_alpha(), (64,64)) for sym, cp in CODEPOINTS.items()}
     font = pygame.font.Font(None, 32)
@@ -177,12 +199,17 @@ def main():
                 bet_mode = (bet_mode + 1) % len(MODES)
                 show_selection = True
                 draw(screen, grid, credits, message, font, None, get_selected_lines())
+            # cycle multiplier on multiplier button click
+            if event.type == pygame.MOUSEBUTTONDOWN and not spin_active and mult_button_rect.collidepoint(event.pos):
+                global multiplier_idx
+                multiplier_idx = (multiplier_idx + 1) % len(MULTIPLIERS)
+                draw(screen, grid, credits, message, font, None, get_selected_lines() if show_selection else None)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
                 # start spin: disable mode toggling and hide overlays
                 spin_active = True
                 show_selection = False
-                # determine bet cost as number of selected lines
-                cost = len(get_selected_lines())
+                # determine bet cost as number of selected lines * multiplier
+                cost = len(get_selected_lines()) * MULTIPLIERS[multiplier_idx]
                 if credits < cost:
                     message = 'Not enough credits'
                     draw(screen, grid, credits, message, font, None, get_selected_lines())
