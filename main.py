@@ -156,6 +156,7 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
     pygame.display.flip()
 
 def main():
+    global bet_mode, multiplier_idx
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
     pygame.display.set_caption('Fruit Slot')
@@ -195,13 +196,11 @@ def main():
                 sys.exit()
             # cycle betting mode on button click (disabled during spin)
             if event.type == pygame.MOUSEBUTTONDOWN and not spin_active and button_rect.collidepoint(event.pos):
-                global bet_mode
                 bet_mode = (bet_mode + 1) % len(MODES)
                 show_selection = True
                 draw(screen, grid, credits, message, font, None, get_selected_lines())
             # cycle multiplier on multiplier button click
             if event.type == pygame.MOUSEBUTTONDOWN and not spin_active and mult_button_rect.collidepoint(event.pos):
-                global multiplier_idx
                 multiplier_idx = (multiplier_idx + 1) % len(MULTIPLIERS)
                 draw(screen, grid, credits, message, font, None, get_selected_lines() if show_selection else None)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
@@ -257,6 +256,13 @@ def main():
                             if ev.type == pygame.MOUSEBUTTONDOWN and button_rect.collidepoint(ev.pos):
                                 bet_mode = (bet_mode + 1) % len(MODES)
                                 draw(screen, grid, credits, '', font, None, get_selected_lines())
+                                highlighting = False
+                                break
+                            # allow changing multiplier during highlight
+                            if ev.type == pygame.MOUSEBUTTONDOWN and mult_button_rect.collidepoint(ev.pos):
+                                multiplier_idx = (multiplier_idx + 1) % len(MULTIPLIERS)
+                                # redraw with current highlight but updated multiplier UI
+                                draw(screen, grid, credits, message, font, highlight_win=coords, selected_lines=None)
                                 highlighting = False
                                 break
                 # display final message unless skipped
