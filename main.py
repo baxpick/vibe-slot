@@ -225,8 +225,11 @@ def main():
                     pygame.time.delay(50)
                 # final spin result
                 grid = spin()
-                wins = evaluate_all(grid)
-                total = sum(p for _,p in wins)
+                # evaluate wins and apply multiplier to each line, then immediately credit total win
+                raw_wins = evaluate_all(grid)
+                wins = [(coords, payout * MULTIPLIERS[multiplier_idx]) for coords, payout in raw_wins]
+                total = sum(p for _, p in wins)
+                credits += total
                 skip_post_win = False
                 # continuously highlight winning lines until player spins again
                 if wins:
@@ -256,16 +259,15 @@ def main():
                                 draw(screen, grid, credits, '', font, None, get_selected_lines())
                                 highlighting = False
                                 break
-                # update credits and final message unless skipped
+                # display final message unless skipped
                 if not skip_post_win:
                     if total > 0:
-                        credits += total
                         message = f'Total win {total}'
                     else:
                         message = 'No win'
                     if credits <= 0:
                         message = 'Game over!'
-                    # redraw final grid without overlays
+                    # redraw final grid without overlays (credits already updated)
                     draw(screen, grid, credits, message, font, None, None)
                 # spin complete: re-enable mode toggling
                 spin_active = False
