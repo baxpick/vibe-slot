@@ -204,7 +204,7 @@ def main():
                 multiplier_idx = (multiplier_idx + 1) % len(MULTIPLIERS)
                 draw(screen, grid, credits, message, font, None, get_selected_lines() if show_selection else None)
             if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
-                # start spin: disable mode toggling and hide overlays
+                # start spin: disable buttons only now
                 spin_active = True
                 show_selection = False
                 # determine bet cost as number of selected lines * multiplier
@@ -212,12 +212,13 @@ def main():
                 if credits < cost:
                     message = 'Not enough credits'
                     draw(screen, grid, credits, message, font, None, get_selected_lines())
+                    # re-enable UI so player can adjust lines/multiplier
+                    spin_active = False
                     continue
                 credits -= cost
                 if credits < 0:
                     credits = 0
-                spin_active = True
-                # spin animation: cycle symbols, no overlays
+                 # spin animation: cycle symbols, no overlays
                 for _ in range(15):
                     temp_grid = [random.choices(SYMBOLS, k=3) for _ in range(3)]
                     draw(screen, temp_grid, credits, '', font, None, None)
