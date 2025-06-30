@@ -1,0 +1,12 @@
+[tool.pygbag]
+build = false
+# The following are the default values for the pygbag build.
+# You can uncomment and change them to your needs.
+#
+# build_dir = "build/web"
+# cache_dir = "build/web-cache"
+# cdn = "https://pygame-web.github.io/archives/0.9/"
+# app_name = "vibe-slot"
+# package = "web.pygame.vibe-slot"
+# icon = "favicon.png"
+# main = "main.py"

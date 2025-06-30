@@ -28,43 +28,66 @@ Below is a preview of the game in action:
 
 ## Features
 
-- Randomized three-reel slot spin with fruit emojis.
-- Win evaluation: 3-of-a-kind or 2-of-a-kind payouts.
-- Credit system with spin cost and rewards.
-- Smooth spin animation and real-time rendering via Pygame.
-- Assets auto-downloaded at runtime from Twitter's Twemoji repository.
+- Randomized 3x3 slot grid with fruit symbols.
+- Dynamic betting with multiple line modes (Horizontal, Diagonal, Both).
+- Adjustable bet multiplier (1x to 5x).
+- Win evaluation for 3-of-a-kind and 2-of-a-kind payouts.
+- Asynchronous game loop for web compatibility using `asyncio`.
+- Cross-platform deployment to desktop and web (via `pygbag`).
+- Assets are auto-downloaded at runtime.
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/baxpicker/vibe-slot.git
-   cd vibe-slot
-   ```
-2. (Optional) Create and activate a virtual environment:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install pygame
-   ```
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/baxpicker/vibe-slot.git
+    cd vibe-slot
+    ```
+
+2.  **(Optional) Create a virtual environment:**
+    ```bash
+    python3 -m venv venv
+    source venv/bin/activate
+    ```
+
+3.  **Install dependencies:**
+    This will install `pygame` for the game engine and `pygbag` for web deployment.
+    ```bash
+    pip install pygame pygbag
+    ```
 
 ## Usage
 
-Run the game with:
+The game can be run as a native desktop application or as a web application in the browser.
+
+### Web Version (Recommended)
+
+This method compiles the game to WebAssembly and serves it locally, allowing you to play in a web browser.
+
+1.  **Build & Serve:**
+    From the project's root directory, run the following command:
+    ```bash
+    python3 -m pygbag main.py
+    ```
+
+2.  **Access in Browser:**
+    Once the server starts, open your browser and navigate to:
+    [http://localhost:8000](http://localhost:8000)
+
+### Desktop Version
+
+To run the game as a standard desktop application:
 
 ```bash
 python3 main.py
 ```
 
-The `assets/` folder will be auto-populated with emoji images on first run.
-
 ## Controls
 
-- **SPACE**: Spin the reels.
-- **Close Window**: Exit the game.
+-   **Spin**: Press the `SPACE` key.
+-   **Change Betting Mode**: Click the `Lines: ...` button.
+-   **Change Multiplier**: Click the `Multiplier: ...` button.
+-   **Exit**: Close the game window or browser tab.
 
 ## Assets
 

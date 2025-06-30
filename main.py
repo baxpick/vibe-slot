@@ -3,6 +3,7 @@ import random
 import sys
 import pygame
 import os, urllib.request
+import asyncio
 
 # Map fruit names to colors
 COLOR_MAP = {
@@ -155,7 +156,7 @@ def draw(screen, grid, credits, message, font, highlight_win=None, selected_line
     screen.blit(msg_text, (10, SCREEN_HEIGHT - 40))
     pygame.display.flip()
 
-def main():
+async def main():
     global bet_mode, multiplier_idx
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -222,7 +223,7 @@ def main():
                 for _ in range(15):
                     temp_grid = [random.choices(SYMBOLS, k=3) for _ in range(3)]
                     draw(screen, temp_grid, credits, '', font, None, None)
-                    pygame.time.delay(50)
+                    await asyncio.sleep(0.05)
                 # final spin result
                 grid = spin()
                 # evaluate wins and apply multiplier to each line, then immediately credit total win
@@ -239,7 +240,7 @@ def main():
                         coords, payout = wins[idx]
                         message = f'Line {idx+1} wins {payout}'
                         draw(screen, grid, credits, message, font, highlight_win=coords, selected_lines=None)
-                        pygame.time.delay(800)
+                        await asyncio.sleep(0.8)
                         idx = (idx + 1) % len(wins)
                         # handle quitting or new spin
                         for ev in pygame.event.get():
@@ -278,7 +279,8 @@ def main():
                     draw(screen, grid, credits, message, font, None, None)
                 # spin complete: re-enable mode toggling
                 spin_active = False
+        await asyncio.sleep(0)
         clock.tick(30)
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
